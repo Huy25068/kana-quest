@@ -34,3 +34,11 @@ src/
 ## Luật gamification
 - Mỗi câu đúng +10 EXP; thắng ván +30 EXP. Level n cần n×100 EXP.
 - "Chữ hay sai": tỷ lệ đúng < 60%. "Đã thuộc": đúng ≥ 3 lần và ≥ 80%.
+
+## Đồng bộ tài khoản (Supabase – miễn phí)
+1. Tạo project tại https://supabase.com → SQL Editor → chạy `supabase/schema.sql`.
+2. Project Settings → API: lấy **Project URL** và **anon public key**.
+3. Local: copy `.env.example` → `.env.local` và điền 2 giá trị. Vercel: Settings → Environment Variables → thêm `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` rồi Redeploy.
+4. Authentication → URL Configuration: đặt **Site URL** = địa chỉ web (vd https://kana-quest.vercel.app).
+
+Không có 2 biến môi trường thì app vẫn chạy offline, nút tài khoản tự ẩn.

@@ -1,9 +1,13 @@
-import { Flame, Moon, Star, Sun, Volume2, VolumeX } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { CloudOff, Flame, Moon, RefreshCw, Star, Sun, UserRound, Volume2, VolumeX } from 'lucide-react'
+import { useAuthStore } from '../store/useAuthStore'
+import { cloudEnabled } from '../lib/supabase'
 import { currentStreak, levelInfo, useProgressStore } from '../store/useProgressStore'
 import { cn } from '../lib/utils'
 
 export function TopBar() {
   const { exp, streak, lastActiveDate, sfxEnabled, theme, toggleSfx, toggleTheme } = useProgressStore()
+  const { user, syncStatus } = useAuthStore()
   const lv = levelInfo(exp)
   const days = currentStreak(streak, lastActiveDate)
 
@@ -46,6 +50,20 @@ export function TopBar() {
         </div>
 
         <div className="ml-auto flex items-center gap-1">
+          {cloudEnabled && (
+            <Link
+              to="/account"
+              className={cn(
+                'relative grid size-9 place-items-center rounded-xl hover:bg-sumi-100 dark:hover:bg-sumi-800',
+                user ? 'text-sakura-500' : 'text-sumi-500',
+              )}
+              aria-label="Tài khoản"
+              title={user ? `${user.email} – ${syncStatus === 'error' ? 'lỗi đồng bộ' : 'đã đồng bộ'}` : 'Đăng nhập để đồng bộ'}
+            >
+              {syncStatus === 'syncing' ? <RefreshCw className="size-5 animate-spin" /> : syncStatus === 'error' ? <CloudOff className="size-5" /> : <UserRound className="size-5" />}
+              {user && syncStatus === 'idle' && <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-matcha-400" />}
+            </Link>
+          )}
           <button
             onClick={toggleSfx}
             className="grid size-9 place-items-center rounded-xl text-sumi-500 hover:bg-sumi-100 dark:hover:bg-sumi-800"

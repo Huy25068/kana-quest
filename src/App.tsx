@@ -11,6 +11,7 @@ const MemoryMatch = lazy(() => import('./pages/games/MemoryMatch'))
 const FallingKana = lazy(() => import('./pages/games/FallingKana'))
 const AudioQuiz = lazy(() => import('./pages/games/AudioQuiz'))
 const WordBuilder = lazy(() => import('./pages/games/WordBuilder'))
+const Account = lazy(() => import('./pages/Account'))
 const Notes = lazy(() => import('./pages/Notes'))
 const ComingSoon = lazy(() => import('./pages/ComingSoon'))
 const NotFound = lazy(() => import('./pages/NotFound'))
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
       { path: '/arena/audio', element: wrap(<AudioQuiz />) },
       { path: '/arena/word-builder', element: wrap(<WordBuilder />) },
       { path: '/notes', element: wrap(<Notes />) },
+      { path: '/account', element: wrap(<Account />) },
       // Module tương lai: route đã được giữ chỗ, chỉ cần thay element khi phát triển.
       ...FUTURE_MODULES.map((m) => ({ path: m.path, element: wrap(<ComingSoon module={m} />) })),
       { path: '*', element: wrap(<NotFound />) },
