@@ -1,0 +1,138 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+  --font-jp: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+
+  /* Japanese pastel palette */
+  --color-sakura-50: #fff1f4;
+  --color-sakura-100: #ffe0e8;
+  --color-sakura-200: #ffc2d1;
+  --color-sakura-300: #ff96b0;
+  --color-sakura-400: #f7678c;
+  --color-sakura-500: #e84872;
+  --color-sakura-600: #c9305a;
+
+  --color-matcha-50: #f2f8ec;
+  --color-matcha-100: #e1efd4;
+  --color-matcha-200: #c4e0ab;
+  --color-matcha-300: #9dcb78;
+  --color-matcha-400: #78b24e;
+  --color-matcha-500: #5a9434;
+  --color-matcha-600: #447327;
+
+  --color-sora-50: #eef6ff;
+  --color-sora-100: #d9eaff;
+  --color-sora-200: #b6d6ff;
+  --color-sora-300: #86b9fb;
+  --color-sora-400: #5a98f2;
+  --color-sora-500: #3d78de;
+  --color-sora-600: #2d5fbd;
+
+  --color-yuzu-50: #fffbea;
+  --color-yuzu-100: #fff2c4;
+  --color-yuzu-200: #ffe588;
+  --color-yuzu-300: #ffd24a;
+  --color-yuzu-400: #fbbd1f;
+  --color-yuzu-500: #e09c08;
+
+  --color-fuji-50: #f6f2ff;
+  --color-fuji-100: #ece4ff;
+  --color-fuji-200: #d9cbff;
+  --color-fuji-300: #bea4fd;
+  --color-fuji-400: #a078f8;
+  --color-fuji-500: #8554ee;
+
+  --color-sumi-50: #f7f6f4;
+  --color-sumi-100: #eeece8;
+  --color-sumi-200: #dcd8d1;
+  --color-sumi-300: #bdb7ad;
+  --color-sumi-400: #8f887c;
+  --color-sumi-500: #6a6459;
+  --color-sumi-600: #4a4540;
+  --color-sumi-700: #34302c;
+  --color-sumi-800: #24211f;
+  --color-sumi-900: #1a1816;
+  --color-sumi-950: #121110;
+
+  --animate-pop: pop 0.35s ease-out;
+  --animate-shake: shake 0.4s ease-in-out;
+  --animate-float-up: float-up 0.9s ease-out forwards;
+
+  @keyframes pop {
+    0% { transform: scale(0.85); opacity: 0; }
+    60% { transform: scale(1.06); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
+  }
+  @keyframes float-up {
+    0% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(-40px); opacity: 0; }
+  }
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  @apply bg-sumi-50 text-sumi-800 font-sans antialiased dark:bg-sumi-950 dark:text-sumi-100;
+  background-image: radial-gradient(circle at 10% 0%, rgb(255 194 209 / 0.25), transparent 40%),
+    radial-gradient(circle at 90% 100%, rgb(182 214 255 / 0.25), transparent 40%);
+  background-attachment: fixed;
+}
+.dark body {
+  background-image: radial-gradient(circle at 10% 0%, rgb(232 72 114 / 0.10), transparent 40%),
+    radial-gradient(circle at 90% 100%, rgb(61 120 222 / 0.10), transparent 40%);
+}
+
+.font-jp {
+  font-family: var(--font-jp);
+}
+
+/* 3D flip helpers */
+.perspective {
+  perspective: 1000px;
+}
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+@utility card {
+  @apply rounded-3xl border border-sumi-200/70 bg-white/80 shadow-sm backdrop-blur dark:border-sumi-700/60 dark:bg-sumi-900/70;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 font-semibold transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-sakura-500 text-white shadow-[0_4px_0_var(--color-sakura-600)] hover:bg-sakura-400 active:translate-y-1 active:shadow-none;
+}
+@utility btn-success {
+  @apply btn bg-matcha-500 text-white shadow-[0_4px_0_var(--color-matcha-600)] hover:bg-matcha-400 active:translate-y-1 active:shadow-none;
+}
+@utility btn-secondary {
+  @apply btn border border-sumi-200 bg-white text-sumi-700 shadow-[0_3px_0_var(--color-sumi-200)] hover:bg-sumi-50 active:translate-y-0.5 active:shadow-none dark:border-sumi-700 dark:bg-sumi-800 dark:text-sumi-100 dark:shadow-[0_3px_0_var(--color-sumi-700)] dark:hover:bg-sumi-700;
+}
+@utility chip {
+  @apply inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition select-none;
+}
+
+/* Mặt thẻ 3D: không dùng backdrop-filter vì phá vỡ preserve-3d trên một số trình duyệt */
+@utility face {
+  @apply rounded-3xl border border-sumi-200/70 shadow-sm dark:border-sumi-700/60;
+}
