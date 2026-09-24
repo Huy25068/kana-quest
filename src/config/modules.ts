@@ -1,5 +1,5 @@
 import {
-  BookOpen, Gamepad2, Languages, LayoutDashboard, NotebookPen, Settings, SlidersHorizontal, Target, Landmark,
+  BookOpen, Gamepad2, Languages, LayoutDashboard, NotebookPen, Settings, SlidersHorizontal, StickyNote, Target, Landmark,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -21,6 +21,7 @@ export const ACTIVE_MODULES: AppModule[] = [
   { id: 'kana', label: 'Bảng Kana', path: '/kana', icon: Languages, status: 'active' },
   { id: 'scope', label: 'Phạm vi học', path: '/scope', icon: SlidersHorizontal, status: 'active' },
   { id: 'arena', label: 'Đấu trường', path: '/arena', icon: Gamepad2, status: 'active' },
+  { id: 'notes', label: 'Ghi chú', path: '/notes', icon: StickyNote, status: 'active' },
 ]
 
 export const FUTURE_MODULES: AppModule[] = [

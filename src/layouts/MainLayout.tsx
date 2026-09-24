@@ -84,7 +84,7 @@ export default function MainLayout() {
       </div>
 
       {/* Bottom nav – mobile */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-sumi-200 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden dark:border-sumi-800 dark:bg-sumi-900/90">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-sumi-200 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden dark:border-sumi-800 dark:bg-sumi-900/90">
         {ACTIVE_MODULES.map((m) => {
           const Icon = m.icon
           return (
