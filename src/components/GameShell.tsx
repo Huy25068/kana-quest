@@ -3,16 +3,33 @@ import { Link } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { PoolGuard } from './PoolGuard'
 import { useActivePool } from '../hooks/useActivePool'
+import { useBackToClose, useGoUp } from '../lib/navigation'
 
 /** Khung chung cho mọi màn chơi: nút quay lại, tiêu đề, kiểm tra pool. */
-export function GameShell({ title, jp, children }: { title: string; jp: string; children: ReactNode }) {
+interface ShellProps {
+  title: string
+  jp: string
+  children: ReactNode
+  /** Đang trong một ván (kể cả màn kết quả) → nút ← / Back đưa về màn chuẩn bị trước. */
+  active?: boolean
+  onExit?: () => void
+}
+
+export function GameShell({ title, jp, children, active = false, onExit }: ShellProps) {
   const { pool } = useActivePool()
+  const goUp = useGoUp()
+  useBackToClose(active, onExit ?? (() => {}))
   return (
     <div>
       <div className="mb-5 flex items-center gap-3">
-        <Link to="/arena" className="grid size-10 place-items-center rounded-2xl bg-white shadow-sm hover:bg-sumi-100 dark:bg-sumi-800 dark:hover:bg-sumi-700" aria-label="Quay lại">
+        <button
+          onClick={() => (active && onExit ? onExit() : goUp('/arena'))}
+          className="grid size-10 place-items-center rounded-2xl bg-white shadow-sm hover:bg-sumi-100 dark:bg-sumi-800 dark:hover:bg-sumi-700"
+          aria-label={active ? 'Thoát ván' : 'Về Đấu trường'}
+          title={active ? 'Thoát ván' : 'Về Đấu trường'}
+        >
           <ChevronLeft className="size-5" />
-        </Link>
+        </button>
         <div className="flex-1">
           <div className="font-jp text-xs text-sakura-400">{jp}</div>
           <h1 className="text-xl font-extrabold sm:text-2xl">{title}</h1>

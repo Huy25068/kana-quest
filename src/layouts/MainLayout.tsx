@@ -1,17 +1,33 @@
 import { useEffect } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, type LinkProps } from 'react-router-dom'
 import { ACTIVE_MODULES, FUTURE_MODULES, type AppModule } from '../config/modules'
 import { useProgressStore } from '../store/useProgressStore'
 import { TopBar } from '../components/TopBar'
 import { cn } from '../lib/utils'
+import { useNavTracker, useTabNavigate } from '../lib/navigation'
+
+const TOP_PATHS = [...ACTIVE_MODULES, ...FUTURE_MODULES].map((m) => m.path).concat('/account')
+
+/** Click thường → điều hướng kiểu tab; Ctrl/Cmd/chuột giữa → giữ hành vi mở tab mới của trình duyệt. */
+function useTabClick() {
+  const go = useTabNavigate(TOP_PATHS)
+  return (path: string): LinkProps['onClick'] =>
+    (e) => {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      e.preventDefault()
+      go(path)
+    }
+}
 
 function SideLink({ m }: { m: AppModule }) {
+  const tabClick = useTabClick()
   const Icon = m.icon
   const soon = m.status === 'soon'
   return (
     <NavLink
       to={m.path}
       end={m.path === '/'}
+      onClick={tabClick(m.path)}
       className={({ isActive }) =>
         cn(
           'group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition',
@@ -37,6 +53,8 @@ function SideLink({ m }: { m: AppModule }) {
 export default function MainLayout() {
   const theme = useProgressStore((s) => s.theme)
   const { pathname } = useLocation()
+  const tabClick = useTabClick()
+  useNavTracker()
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -92,6 +110,7 @@ export default function MainLayout() {
               key={m.id}
               to={m.path}
               end={m.path === '/'}
+              onClick={tabClick(m.path)}
               className={({ isActive }) =>
                 cn(
                   'flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold',

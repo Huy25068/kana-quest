@@ -78,6 +78,12 @@ export default function AudioQuiz() {
     setScore(0)
   }
 
+  const exit = () => {
+    window.speechSynthesis?.cancel()
+    reset()
+    setQuiz(null)
+  }
+
   const choose = useCallback(
     (k: KanaItem) => {
       if (!q || picked || summary) return
@@ -113,7 +119,7 @@ export default function AudioQuiz() {
   }, [q, choose, play])
 
   return (
-    <GameShell title="Thử thách thính giác" jp="聞き取り">
+    <GameShell title="Thử thách thính giác" jp="聞き取り" active={quiz !== null} onExit={exit}>
       {!quiz ? (
         <StartScreen
           icon="🎧"

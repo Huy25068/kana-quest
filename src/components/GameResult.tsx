@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { RotateCcw, Sparkles, Trophy } from 'lucide-react'
 import { Modal } from './Modal'
 import { celebrate } from '../lib/confetti'
+import { useGoUp } from '../lib/navigation'
 import type { GameSummary } from '../hooks/useGameSession'
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
 }
 
 export function GameResult({ summary, stats, onReplay, reason }: Props) {
+  const goUp = useGoUp()
   useEffect(() => {
     if (summary?.won) celebrate()
   }, [summary])
@@ -41,7 +42,7 @@ export function GameResult({ summary, stats, onReplay, reason }: Props) {
         </div>
         <div className="mt-4 text-sm font-bold text-fuji-500">+{summary.expGained} EXP</div>
         <div className="mt-6 flex gap-2">
-          <Link to="/arena" className="btn-secondary flex-1">Về Đấu trường</Link>
+          <button onClick={() => goUp('/arena')} className="btn-secondary flex-1">Về Đấu trường</button>
           <button onClick={onReplay} className="btn-primary flex-1">
             <RotateCcw className="size-4" /> Chơi lại
           </button>

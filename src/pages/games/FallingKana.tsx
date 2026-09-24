@@ -167,6 +167,12 @@ export default function FallingKana() {
     setTimeout(() => inputRef.current?.focus(), 50)
   }
 
+  const exit = () => {
+    setRunning(false)
+    drops.current = []
+    reset()
+  }
+
   /* ---------- Nhập liệu ---------- */
   const target = drops.current.reduce<Drop | null>((a, d) => (!a || d.y > a.y ? d : a), null)
 
@@ -208,7 +214,7 @@ export default function FallingKana() {
   }
 
   return (
-    <GameShell title="Ký tự rơi tự do" jp="落ちるかな">
+    <GameShell title="Ký tự rơi tự do" jp="落ちるかな" active={running || !!summary} onExit={exit}>
       {!running && !summary ? (
         <StartScreen
           icon="🌧️"

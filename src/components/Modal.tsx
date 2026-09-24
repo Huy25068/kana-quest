@@ -1,7 +1,12 @@
 import { useEffect, type ReactNode } from 'react'
 import { X } from 'lucide-react'
+import { useBackToClose } from '../lib/navigation'
+
+const noop = () => {}
 
 export function Modal({ open, onClose, children }: { open: boolean; onClose?: () => void; children: ReactNode }) {
+  // Nút Back của trình duyệt/điện thoại đóng popup thay vì rời trang.
+  useBackToClose(open && !!onClose, onClose ?? noop)
   useEffect(() => {
     if (!open || !onClose) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()

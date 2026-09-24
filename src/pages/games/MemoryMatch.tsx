@@ -77,6 +77,11 @@ export default function MemoryMatch() {
     lock.current = false
   }
 
+  const exit = () => {
+    reset()
+    setDeck(null)
+  }
+
   const click = (i: number) => {
     if (!deck || lock.current) return
     const card = deck[i]
@@ -116,7 +121,7 @@ export default function MemoryMatch() {
 
   const cols = 4
   return (
-    <GameShell title="Lật thẻ trí nhớ" jp="神経衰弱">
+    <GameShell title="Lật thẻ trí nhớ" jp="神経衰弱" active={deck !== null} onExit={exit}>
       {!deck ? (
         <StartScreen
           icon="🃏"
@@ -179,7 +184,7 @@ export default function MemoryMatch() {
             })}
           </div>
           <div className="mt-5 text-center">
-            <button className="btn-secondary" onClick={() => setDeck(null)}>Đổi chế độ</button>
+            <button className="btn-secondary" onClick={exit}>Đổi chế độ</button>
           </div>
         </div>
       )}

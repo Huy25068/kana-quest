@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronLeft, Pin, PinOff, Plus, Search, StickyNote, Trash } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
 import { NOTE_COLORS, useNotesStore, type Note, type NoteColor } from '../store/useNotesStore'
 import { cn } from '../lib/utils'
+import { useGoUp } from '../lib/navigation'
 
 // Chuỗi class tĩnh để Tailwind quét được.
 const COLOR: Record<NoteColor, { card: string; dot: string }> = {
@@ -86,12 +87,31 @@ export default function Notes() {
       .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt)
   }, [notes, query])
 
-  const open = (id: string | null) => {
-    // Rời một ghi chú còn trống thì bỏ luôn, tránh rác trong danh sách.
-    if (selected && selected.id !== id && !selected.title.trim() && !selected.content.trim()) removeNote(selected.id)
-    setParams(id ? { id } : {})
-  }
+  const goUp = useGoUp()
+
+  // Danh sách → ghi chú: thêm 1 bước lịch sử; ghi chú → ghi chú khác: thay thế (Back luôn về danh sách).
+  const open = (id: string) => setParams({ id }, { replace: !!selectedId })
+  const close = () => goUp('/notes')
   const create = () => open(addNote())
+
+  // Rời một ghi chú còn trống (bằng bất kỳ cách nào, kể cả nút Back) → bỏ luôn, tránh rác.
+  const prevId = useRef(selectedId)
+  useEffect(() => {
+    const dropIfEmpty = (id: string | null) => {
+      const n = id && useNotesStore.getState().notes.find((x) => x.id === id)
+      if (n && !n.title.trim() && !n.content.trim()) removeNote(n.id)
+    }
+    if (prevId.current !== selectedId) dropIfEmpty(prevId.current)
+    prevId.current = selectedId
+  }, [selectedId, removeNote])
+  useEffect(
+    () => () => {
+      const id = prevId.current
+      const n = id && useNotesStore.getState().notes.find((x) => x.id === id)
+      if (n && !n.title.trim() && !n.content.trim()) useNotesStore.getState().removeNote(n.id)
+    },
+    [],
+  )
 
   return (
     <div>
@@ -146,7 +166,7 @@ export default function Notes() {
         {/* Soạn thảo */}
         <div className={cn(!selected && 'hidden lg:block')}>
           {selected ? (
-            <Editor key={selected.id} note={selected} onBack={() => open(null)} />
+            <Editor key={selected.id} note={selected} onBack={close} />
           ) : (
             <div className="card grid min-h-[60dvh] place-items-center p-8 text-center">
               <div>

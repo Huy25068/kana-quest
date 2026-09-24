@@ -213,7 +213,7 @@ export default function KanaChart() {
             ].map((t) => (
               <button
                 key={t.id}
-                onClick={() => setParams(t.id === 'chart' ? {} : { mode: t.id })}
+                onClick={() => setParams(t.id === 'chart' ? {} : { mode: t.id }, { replace: true })}
                 className={cn(
                   'flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition',
                   mode === t.id ? 'bg-white text-sakura-600 shadow-sm dark:bg-sumi-700 dark:text-sakura-300' : 'text-sumi-500',

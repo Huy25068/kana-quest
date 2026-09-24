@@ -74,6 +74,11 @@ export default function WordBuilder() {
     setSolved(0)
   }
 
+  const exit = () => {
+    reset()
+    setRounds(null)
+  }
+
   const check = (next: number[], usedHints = hints) => {
     if (!round || next.length !== round.word.tokens.length) return
     const built = next.map((u) => tileByUid(u).char).join('')
@@ -140,7 +145,7 @@ export default function WordBuilder() {
   const tileCls = 'grid size-14 place-items-center rounded-2xl border-2 font-jp text-3xl font-bold shadow-[0_3px_0] transition active:translate-y-0.5 active:shadow-none sm:size-16'
 
   return (
-    <GameShell title="Xếp chữ thành từ" jp="言葉づくり">
+    <GameShell title="Xếp chữ thành từ" jp="言葉づくり" active={rounds !== null} onExit={exit}>
       {!rounds ? (
         <StartScreen
           icon="🧩"
