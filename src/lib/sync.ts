@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import { useProgressStore } from '../store/useProgressStore'
 import { useScopeStore } from '../store/useScopeStore'
 import { useNotesStore, type Note } from '../store/useNotesStore'
+import { useReviewStore } from '../store/useReviewStore'
 import type { CharStat } from '../types/kana'
 
 /**
@@ -29,6 +30,7 @@ const STORES: Record<string, PersistedStore> = {
   'kq-progress': useProgressStore as unknown as PersistedStore,
   'kq-scope': useScopeStore as unknown as PersistedStore,
   'kq-notes': useNotesStore as unknown as PersistedStore,
+  'kq-review': useReviewStore as unknown as PersistedStore,
 }
 const META_KEY = 'kq-sync-meta'
 
@@ -109,6 +111,7 @@ function merge(key: string, local: Persisted, cloud: Persisted): Persisted {
   const version = cloud.version ?? local.version
   if (key === 'kq-progress') return { state: mergeProgress(local.state, cloud.state), version }
   if (key === 'kq-notes') return { state: mergeNotes(local.state, cloud.state), version }
+  if (key === 'kq-review') return { state: { items: { ...(local.state.items as object), ...(cloud.state.items as object) } }, version }
   return cloud // phạm vi học: lấy theo cloud
 }
 

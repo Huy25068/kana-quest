@@ -48,7 +48,7 @@ function buildQuiz(pool: KanaItem[]): Question[] {
 
 export default function AudioQuiz() {
   const { pool } = useActivePool()
-  const { answer, finish, reset, summary } = useGameSession('audio')
+  const { answer, finish, reset, summary, missed } = useGameSession('audio')
   const [quiz, setQuiz] = useState<Question[] | null>(null)
   const [idx, setIdx] = useState(0)
   const [picked, setPicked] = useState<string | null>(null)
@@ -193,6 +193,7 @@ export default function AudioQuiz() {
       <GameResult
         summary={summary}
         onReplay={start}
+        missed={missed}
         reason={summary && !summary.won ? 'Cần đúng ít nhất 70% để chiến thắng.' : undefined}
         stats={[
           { label: 'Điểm', value: score },

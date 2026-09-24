@@ -10,6 +10,7 @@ interface ScopeState {
   toggleRow: (row: string) => void
   setRows: (rows: string[], on: boolean) => void
   setOnlyMistakes: (v: boolean) => void
+  setOnlyReviewList: (v: boolean) => void
   reset: () => void
 }
 
@@ -18,6 +19,7 @@ export const DEFAULT_SCOPE: ScopeConfig = {
   categories: { seion: true, dakuon: false, handakuon: false, yoon: false },
   selectedRows: ROWS.filter((r) => r.category === 'seion').map((r) => r.id),
   onlyMistakes: false,
+  onlyReviewList: false,
 }
 
 const update = (fn: (c: ScopeConfig) => Partial<ScopeConfig>) => (s: ScopeState) => ({
@@ -56,6 +58,7 @@ export const useScopeStore = create<ScopeState>()(
           })),
         ),
       setOnlyMistakes: (onlyMistakes) => set(update(() => ({ onlyMistakes }))),
+      setOnlyReviewList: (onlyReviewList) => set(update(() => ({ onlyReviewList }))),
       reset: () => set({ config: DEFAULT_SCOPE }),
     }),
     { name: 'kq-scope', version: 1 },

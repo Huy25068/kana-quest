@@ -1,12 +1,13 @@
 import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, Gamepad2, Layers, RotateCcw, Zap } from 'lucide-react'
+import { Bookmark, Check, Gamepad2, Layers, RotateCcw, Zap } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
 import { PoolWarning } from '../components/PoolGuard'
 import { ALL_KANA, CATEGORY_LABELS, ROWS } from '../data/kana'
 import { useScopeStore } from '../store/useScopeStore'
 import { isWeak, useProgressStore } from '../store/useProgressStore'
 import { useActivePool } from '../hooks/useActivePool'
+import { useReviewStore } from '../store/useReviewStore'
 import { cn } from '../lib/utils'
 import type { KanaCategory, Script } from '../types/kana'
 
@@ -37,7 +38,8 @@ function Section({ step, title, children, aside }: { step: number; title: string
 }
 
 export default function StudyScope() {
-  const { config, setScripts, toggleCategory, toggleRow, setRows, setOnlyMistakes, reset } = useScopeStore()
+  const { config, setScripts, toggleCategory, toggleRow, setRows, setOnlyMistakes, setOnlyReviewList, reset } = useScopeStore()
+  const reviewCount = useReviewStore((s) => Object.keys(s.items).length)
   const stats = useProgressStore((s) => s.stats)
   const { pool, isPlayable } = useActivePool()
 
@@ -156,6 +158,18 @@ export default function StudyScope() {
                 </div>
               </div>
               <input type="checkbox" className="peer sr-only" checked={config.onlyMistakes} onChange={(e) => setOnlyMistakes(e.target.checked)} />
+              <span className="relative h-7 w-12 shrink-0 rounded-full bg-sumi-200 transition peer-checked:bg-yuzu-400 after:absolute after:top-1 after:left-1 after:size-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-5 dark:bg-sumi-700" />
+            </label>
+            <label className="mt-3 flex cursor-pointer items-center gap-4 rounded-2xl border-2 border-sumi-200 p-4 transition has-[:checked]:border-yuzu-400 has-[:checked]:bg-yuzu-50 dark:border-sumi-700 dark:has-[:checked]:bg-yuzu-500/10">
+              <Bookmark className="size-6 shrink-0 text-yuzu-500" />
+              <div className="flex-1">
+                <div className="font-bold">Chỉ luyện Sổ hay quên</div>
+                <div className="text-sm text-sumi-500">
+                  Chỉ lấy <b>{reviewCount}</b> chữ bạn đã lưu vào sổ – <i>bỏ qua</i> các lựa chọn bảng chữ, nhóm âm, hàng ở trên.{' '}
+                  <Link to="/kana?mode=review" className="font-semibold text-sakura-500 hover:underline">Xem sổ</Link>
+                </div>
+              </div>
+              <input type="checkbox" className="peer sr-only" checked={!!config.onlyReviewList} onChange={(e) => setOnlyReviewList(e.target.checked)} />
               <span className="relative h-7 w-12 shrink-0 rounded-full bg-sumi-200 transition peer-checked:bg-yuzu-400 after:absolute after:top-1 after:left-1 after:size-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-5 dark:bg-sumi-700" />
             </label>
           </Section>

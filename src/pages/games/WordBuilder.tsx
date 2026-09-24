@@ -49,7 +49,7 @@ const idsOf = (w: WordEntry) => w.tokens.map((t) => KANA_BY_CHAR.get(t)?.id).fil
 
 export default function WordBuilder() {
   const { pool, config } = useActivePool()
-  const { answer, finish, reset, summary } = useGameSession('builder')
+  const { answer, finish, reset, summary, missed } = useGameSession('builder')
   const { words, relaxed } = useMemo(() => pickWords(pool, config), [pool, config])
   const [rounds, setRounds] = useState<Round[] | null>(null)
   const [idx, setIdx] = useState(0)
@@ -271,6 +271,7 @@ export default function WordBuilder() {
       <GameResult
         summary={summary}
         onReplay={start}
+        missed={missed}
         reason={summary && !summary.won ? 'Cần xếp đúng ít nhất 60% số từ.' : undefined}
         stats={[
           { label: 'Điểm', value: score },

@@ -16,7 +16,7 @@ interface ShellProps {
 }
 
 export function GameShell({ title, jp, children, active = false, onExit }: ShellProps) {
-  const { pool } = useActivePool()
+  const { pool, config } = useActivePool()
   const goUp = useGoUp()
   useBackToClose(active, onExit ?? (() => {}))
   return (
@@ -34,8 +34,15 @@ export function GameShell({ title, jp, children, active = false, onExit }: Shell
           <div className="font-jp text-xs text-sakura-400">{jp}</div>
           <h1 className="text-xl font-extrabold sm:text-2xl">{title}</h1>
         </div>
-        <Link to="/scope" className="chip border-sumi-200 bg-white text-sumi-500 hover:border-sakura-300 dark:border-sumi-700 dark:bg-sumi-800">
-          {pool.length} chữ
+        <Link
+          to={config.onlyReviewList ? '/kana?mode=review' : '/scope'}
+          className={
+            config.onlyReviewList
+              ? 'chip border-yuzu-300 bg-yuzu-50 text-yuzu-500 dark:border-yuzu-500/40 dark:bg-yuzu-500/10'
+              : 'chip border-sumi-200 bg-white text-sumi-500 hover:border-sakura-300 dark:border-sumi-700 dark:bg-sumi-800'
+          }
+        >
+          {config.onlyReviewList ? `🔖 Sổ hay quên · ${pool.length}` : `${pool.length} chữ`}
         </Link>
       </div>
       <PoolGuard>{children}</PoolGuard>

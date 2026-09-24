@@ -1,9 +1,11 @@
-import { Lightbulb, Volume2 } from 'lucide-react'
+import { Bookmark, BookmarkCheck, Lightbulb, Volume2 } from 'lucide-react'
 import { Modal } from './Modal'
 import type { KanaItem } from '../types/kana'
 import { CATEGORY_LABELS, KANA_BY_ID } from '../data/kana'
 import { accuracy, useProgressStore } from '../store/useProgressStore'
-import { speak } from '../lib/audio'
+import { playSfx, speak } from '../lib/audio'
+import { useReviewStore } from '../store/useReviewStore'
+import { cn } from '../lib/utils'
 
 export function counterpartOf(k: KanaItem) {
   return KANA_BY_ID.get(k.type === 'hiragana' ? k.id.replace('hira_', 'kata_') : k.id.replace('kata_', 'hira_'))
@@ -11,6 +13,8 @@ export function counterpartOf(k: KanaItem) {
 
 export function KanaDetail({ kana, onClose }: { kana: KanaItem | null; onClose: () => void }) {
   const stat = useProgressStore((s) => (kana ? s.stats[kana.id] : undefined))
+  const inReview = useReviewStore((s) => !!(kana && s.items[kana.id]))
+  const toggleReview = useReviewStore((s) => s.toggle)
   if (!kana) return null
   const acc = accuracy(stat)
   const other = counterpartOf(kana)
@@ -35,9 +39,20 @@ export function KanaDetail({ kana, onClose }: { kana: KanaItem | null; onClose: 
           {kana.char}
         </button>
         <div className="text-2xl font-extrabold text-sakura-500">{kana.romaji}</div>
-        <button onClick={() => speak(kana.char, { audioUrl: kana.audioUrl })} className="btn-secondary mt-3">
-          <Volume2 className="size-4" /> Nghe phát âm
-        </button>
+        <div className="mt-3 flex justify-center gap-2">
+          <button onClick={() => speak(kana.char, { audioUrl: kana.audioUrl })} className="btn-secondary">
+            <Volume2 className="size-4" /> Nghe
+          </button>
+          <button
+            onClick={() => {
+              playSfx(toggleReview(kana.id) ? 'correct' : 'click')
+            }}
+            className={cn('btn-secondary', inReview && 'border-yuzu-300 bg-yuzu-50 text-yuzu-500 dark:border-yuzu-500/40 dark:bg-yuzu-500/10')}
+          >
+            {inReview ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
+            {inReview ? 'Đã có trong sổ' : 'Thêm vào sổ hay quên'}
+          </button>
+        </div>
       </div>
 
       <div className="mt-5 space-y-3 text-sm">

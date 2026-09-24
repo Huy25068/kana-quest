@@ -29,7 +29,7 @@ interface Pop {
 
 export default function FallingKana() {
   const { pool } = useActivePool()
-  const { answer, finish, reset, summary } = useGameSession('falling')
+  const { answer, finish, reset, summary, missed } = useGameSession('falling')
   const [running, setRunning] = useState(false)
   const [, setFrame] = useState(0)
   const [input, setInput] = useState('')
@@ -301,6 +301,7 @@ export default function FallingKana() {
       <GameResult
         summary={summary}
         onReplay={start}
+        missed={missed}
         reason={summary && !summary.won ? 'Số chữ bắt được cần nhiều hơn số chữ bỏ lỡ.' : undefined}
         stats={[
           { label: 'Điểm', value: score },

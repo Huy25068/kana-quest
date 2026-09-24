@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Check, Layers, Lightbulb, RotateCcw, Shuffle, Table2, Volume2, X } from 'lucide-react'
+import { Bookmark, BookmarkCheck, Check, Layers, Lightbulb, RotateCcw, Shuffle, Table2, Volume2, X } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
 import { KanaDetail } from '../components/KanaDetail'
 import { PoolGuard } from '../components/PoolGuard'
+import { ReviewList } from '../components/ReviewList'
+import { useReviewStore } from '../store/useReviewStore'
 import { GOJUON_GRID, KANA_BY_ID } from '../data/kana'
 import { accuracy, useProgressStore } from '../store/useProgressStore'
 import { useActivePool } from '../hooks/useActivePool'
@@ -22,6 +24,7 @@ function accColor(acc: number | null) {
 
 function KanaCell({ k, onOpen, small }: { k?: KanaItem; onOpen: (k: KanaItem) => void; small?: boolean }) {
   const stat = useProgressStore((s) => (k ? s.stats[k.id] : undefined))
+  const inReview = useReviewStore((s) => !!(k && s.items[k.id]))
   if (!k) return <div />
   return (
     <button
@@ -32,6 +35,7 @@ function KanaCell({ k, onOpen, small }: { k?: KanaItem; onOpen: (k: KanaItem) =>
       className="group relative flex aspect-square flex-col items-center justify-center rounded-2xl border border-sumi-200/80 bg-white transition hover:-translate-y-0.5 hover:border-sakura-300 hover:shadow-md active:scale-95 dark:border-sumi-700 dark:bg-sumi-800 dark:hover:border-sakura-400"
     >
       <span className={cn('absolute top-1.5 right-1.5 size-1.5 rounded-full', accColor(accuracy(stat)))} />
+      {inReview && <BookmarkCheck className="absolute top-1 left-1 size-3.5 text-yuzu-400" aria-label="Trong sổ hay quên" />}
       <span className={cn('font-jp font-bold leading-none', small ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-4xl')}>{k.char}</span>
       <span className="mt-1 text-[10px] font-semibold text-sumi-400 group-hover:text-sakura-500 sm:text-xs">{k.romaji}</span>
     </button>
@@ -62,6 +66,15 @@ function Flashcards() {
   const [flipped, setFlipped] = useState(false)
   const [reverse, setReverse] = useState(false)
   const [known, setKnown] = useState(0)
+  const [toast, setToast] = useState<string | null>(null)
+  const addReview = useReviewStore((s) => s.add)
+  const toggleReview = useReviewStore((s) => s.toggle)
+  const inReview = useReviewStore((s) => !!(deck[idx] && s.items[deck[idx].id]))
+
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast((t) => (t === msg ? null : t)), 1800)
+  }
 
   const card = deck[idx]
   const done = idx >= deck.length
@@ -85,11 +98,14 @@ function Flashcards() {
       if (!card) return
       recordAnswer(card.id, remembered)
       if (remembered) setKnown((n) => n + 1)
+      // Chưa nhớ → tự đưa vào Sổ hay quên.
+      else if (addReview(card.id, 'flashcard')) showToast(`🔖 Đã thêm ${card.char} vào sổ hay quên`)
       playSfx(remembered ? 'correct' : 'click')
       setFlipped(false)
       setTimeout(() => setIdx((i) => i + 1), 150)
     },
-    [card, recordAnswer],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [card, recordAnswer, addReview],
   )
 
   useEffect(() => {
@@ -137,6 +153,13 @@ function Flashcards() {
           </button>
           <button className="chip border-sumi-200 dark:border-sumi-700" onClick={restart}>
             <Shuffle className="size-3.5" /> Trộn
+          </button>
+          <button
+            className={cn('chip', inReview ? 'border-yuzu-300 bg-yuzu-50 text-yuzu-500 dark:bg-yuzu-500/10' : 'border-sumi-200 dark:border-sumi-700')}
+            onClick={() => showToast(toggleReview(card.id) ? `🔖 Đã thêm ${card.char} vào sổ hay quên` : `Đã bỏ ${card.char} khỏi sổ`)}
+            title="Lưu chữ này vào Sổ hay quên"
+          >
+            {inReview ? <BookmarkCheck className="size-3.5" /> : <Bookmark className="size-3.5" />} {inReview ? 'Đã lưu' : 'Lưu'}
           </button>
         </div>
       </div>
@@ -186,7 +209,9 @@ function Flashcards() {
         </button>
       </div>
 
-
+      {toast && (
+        <div className="fixed inset-x-0 top-20 z-40 mx-auto w-fit animate-pop rounded-2xl bg-yuzu-400 px-5 py-3 font-bold text-white shadow-lg">{toast}</div>
+      )}
     </div>
   )
 }
@@ -195,7 +220,9 @@ function Flashcards() {
 
 export default function KanaChart() {
   const [params, setParams] = useSearchParams()
-  const mode = params.get('mode') === 'flashcard' ? 'flashcard' : 'chart'
+  const modeParam = params.get('mode')
+  const mode = modeParam === 'flashcard' || modeParam === 'review' ? modeParam : 'chart'
+  const reviewCount = useReviewStore((s) => Object.keys(s.items).length)
   const [script, setScript] = useState<Script>('hiragana')
   const [selected, setSelected] = useState<KanaItem | null>(null)
 
@@ -204,22 +231,32 @@ export default function KanaChart() {
       <PageHeader
         jp="五十音図"
         title="Bảng Kana & Flashcard"
-        subtitle={mode === 'chart' ? 'Bấm vào từng chữ để nghe phát âm, xem mẹo nhớ và từ ví dụ.' : 'Học theo thẻ từ phạm vi học đã chọn.'}
+        subtitle={
+          mode === 'chart'
+            ? 'Bấm vào từng chữ để nghe phát âm, xem mẹo nhớ và từ ví dụ.'
+            : mode === 'flashcard'
+              ? 'Học theo thẻ từ phạm vi học đã chọn. Chữ nào "Chưa nhớ" sẽ tự vào Sổ hay quên.'
+              : 'Những chữ bạn muốn luyện thêm – học riêng bằng Flashcard hoặc game.'
+        }
         actions={
-          <div className="flex rounded-2xl bg-sumi-100 p-1 dark:bg-sumi-800">
+          <div className="grid w-full grid-cols-3 rounded-2xl bg-sumi-100 p-1 sm:flex sm:w-auto dark:bg-sumi-800">
             {[
               { id: 'chart', label: 'Bảng tra', icon: Table2 },
               { id: 'flashcard', label: 'Flashcard', icon: Layers },
+              { id: 'review', label: 'Sổ hay quên', icon: Bookmark },
             ].map((t) => (
               <button
                 key={t.id}
                 onClick={() => setParams(t.id === 'chart' ? {} : { mode: t.id }, { replace: true })}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition',
+                  'flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-2 py-2 text-xs font-semibold transition sm:px-4 sm:text-sm',
                   mode === t.id ? 'bg-white text-sakura-600 shadow-sm dark:bg-sumi-700 dark:text-sakura-300' : 'text-sumi-500',
                 )}
               >
-                <t.icon className="size-4" /> {t.label}
+                <t.icon className="hidden size-4 sm:block" /> {t.label}
+                {t.id === 'review' && reviewCount > 0 && (
+                  <span className="rounded-full bg-yuzu-400 px-1.5 text-[11px] font-bold text-white">{reviewCount}</span>
+                )}
               </button>
             ))}
           </div>
@@ -227,9 +264,11 @@ export default function KanaChart() {
       />
 
       {mode === 'flashcard' ? (
-        <PoolGuard>
+        <PoolGuard min={1}>
           <Flashcards />
         </PoolGuard>
+      ) : mode === 'review' ? (
+        <ReviewList onOpen={setSelected} onStudyFlashcard={() => setParams({ mode: 'flashcard' }, { replace: true })} />
       ) : (
         <>
           <div className="mb-5 flex flex-wrap items-center gap-2">

@@ -25,6 +25,7 @@ export interface ScopeConfig {
   categories: Record<KanaCategory, boolean>
   selectedRows: string[]
   onlyMistakes: boolean // Chỉ lấy chữ có tỷ lệ đúng < 60%
+  onlyReviewList?: boolean // Chỉ luyện chữ trong Sổ hay quên (bỏ qua các bộ lọc khác)
 }
 
 export interface CharStat {
