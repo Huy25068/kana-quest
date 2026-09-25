@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { BookmarkPlus, RotateCcw, Sparkles, Trophy } from 'lucide-react'
 import { KANA_BY_ID } from '../data/kana'
 import { useReviewStore } from '../store/useReviewStore'
@@ -14,9 +14,11 @@ interface Props {
   reason?: string
   /** Chữ trả lời sai trong ván – gợi ý thêm vào Sổ hay quên. */
   missed?: string[]
+  /** Nội dung riêng của từng game (vd danh sách chữ đập nhầm). */
+  extra?: ReactNode
 }
 
-export function GameResult({ summary, stats, onReplay, reason, missed = [] }: Props) {
+export function GameResult({ summary, stats, onReplay, reason, missed = [], extra }: Props) {
   const goUp = useGoUp()
   const reviewItems = useReviewStore((s) => s.items)
   const addReview = useReviewStore((s) => s.add)
@@ -48,6 +50,7 @@ export function GameResult({ summary, stats, onReplay, reason, missed = [] }: Pr
           ))}
         </div>
         <div className="mt-4 text-sm font-bold text-fuji-500">+{summary.expGained} EXP</div>
+        {extra}
         {missed.length > 0 && (
           <div className="mt-4 rounded-2xl bg-yuzu-50 p-3 text-left dark:bg-yuzu-500/10">
             <div className="text-xs font-bold text-sumi-500">Chữ bị sai trong ván này</div>

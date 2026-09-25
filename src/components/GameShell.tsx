@@ -13,9 +13,11 @@ interface ShellProps {
   /** Đang trong một ván (kể cả màn kết quả) → nút ← / Back đưa về màn chuẩn bị trước. */
   active?: boolean
   onExit?: () => void
+  /** Số chữ tối thiểu trong pool để chơi (mặc định 4). */
+  minPool?: number
 }
 
-export function GameShell({ title, jp, children, active = false, onExit }: ShellProps) {
+export function GameShell({ title, jp, children, active = false, onExit, minPool }: ShellProps) {
   const { pool, config } = useActivePool()
   const goUp = useGoUp()
   useBackToClose(active, onExit ?? (() => {}))
@@ -45,7 +47,7 @@ export function GameShell({ title, jp, children, active = false, onExit }: Shell
           {config.onlyReviewList ? `🔖 Sổ hay quên · ${pool.length}` : `${pool.length} chữ`}
         </Link>
       </div>
-      <PoolGuard>{children}</PoolGuard>
+      {minPool === 0 ? children : <PoolGuard min={minPool}>{children}</PoolGuard>}
     </div>
   )
 }

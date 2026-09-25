@@ -13,6 +13,9 @@ const AudioQuiz = lazy(() => import('./pages/games/AudioQuiz'))
 const WordBuilder = lazy(() => import('./pages/games/WordBuilder'))
 const Account = lazy(() => import('./pages/Account'))
 const Notes = lazy(() => import('./pages/Notes'))
+const KanaWhackAMole = lazy(() => import('./pages/games/KanaWhackAMole'))
+const KanaNinja = lazy(() => import('./pages/games/KanaNinja'))
+const KanaTracing = lazy(() => import('./pages/games/KanaTracing'))
 const ComingSoon = lazy(() => import('./pages/ComingSoon'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
@@ -33,6 +36,9 @@ const router = createBrowserRouter([
       { path: '/arena/falling', element: wrap(<FallingKana />) },
       { path: '/arena/audio', element: wrap(<AudioQuiz />) },
       { path: '/arena/word-builder', element: wrap(<WordBuilder />) },
+      { path: '/arena/whack', element: wrap(<KanaWhackAMole />) },
+      { path: '/arena/ninja', element: wrap(<KanaNinja />) },
+      { path: '/arena/tracing', element: wrap(<KanaTracing />) },
       { path: '/notes', element: wrap(<Notes />) },
       { path: '/account', element: wrap(<Account />) },
       // Module tương lai: route đã được giữ chỗ, chỉ cần thay element khi phát triển.

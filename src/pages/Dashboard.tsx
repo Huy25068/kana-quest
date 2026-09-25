@@ -16,6 +16,9 @@ const GAME_NAMES: Record<GameId, string> = {
   falling: 'Ký tự rơi',
   audio: 'Thử thách thính giác',
   builder: 'Xếp chữ thành từ',
+  whack: 'Đập chuột Kana',
+  ninja: 'Kana Ninja',
+  tracing: 'Tập viết nét',
 }
 
 function StatCard({ icon, label, value, tone }: { icon: ReactNode; label: string; value: ReactNode; tone: string }) {

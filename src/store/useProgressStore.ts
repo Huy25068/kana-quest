@@ -6,7 +6,7 @@ import { todayKey } from '../lib/utils'
 export const EXP_PER_CORRECT = 10
 export const WEAK_THRESHOLD = 0.6
 
-export type GameId = 'memory' | 'falling' | 'audio' | 'builder'
+export type GameId = 'memory' | 'falling' | 'audio' | 'builder' | 'whack' | 'ninja' | 'tracing'
 
 interface ProgressState {
   exp: number
