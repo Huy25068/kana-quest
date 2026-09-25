@@ -13,6 +13,10 @@ const ROUND_MS = 60_000
 const RULE_MS = 20_000
 const PENALTY_MS = 3_000 // chém nhầm / chém bom / lọt 3 chữ → trừ 3 giây (thay cho mất tim)
 const TRAIL_MS = 180
+// Độ khó: trọng lực thấp → bóng bay chậm, lơ lửng lâu hơn (≈3 giây trên màn hình).
+const GRAVITY = 0.5 // × chiều cao khung / giây²
+const MAX_ON_SCREEN = 4
+const BOMB_RATE = 0.07
 const COLORS = ['#ffc2d1', '#c4e0ab', '#b6d6ff', '#ffe588', '#d9cbff', '#ffd6a5']
 
 /* ---------------- Luật chém ---------------- */
@@ -184,22 +188,24 @@ export default function KanaNinja() {
     const spawn = (now: number) => {
       const s = g.current
       const { W, H } = s
-      const n = 1 + Math.floor(Math.random() * (Math.random() < 0.35 ? 3 : 2))
+      const onScreen = s.balls.filter((b) => !b.sliced).length
+      // Mỗi đợt 1 chữ, thỉnh thoảng 2; không vượt quá MAX_ON_SCREEN bóng cùng lúc.
+      const n = Math.min(Math.random() < 0.25 ? 2 : 1, MAX_ON_SCREEN - onScreen)
       for (let i = 0; i < n; i++) {
-        const isBomb = Math.random() < 0.1
+        const isBomb = Math.random() < BOMB_RATE
         const good = s.pool.filter((k) => s.rule!.test(k))
         const bad = s.pool.filter((k) => !s.rule!.test(k))
         const kana = isBomb ? null : Math.random() < 0.55 && good.length ? pick(good) : pick(bad.length ? bad : good)
         const r = Math.max(26, Math.min(40, W * 0.06))
         const x = W * (0.15 + Math.random() * 0.7)
-        const grav = H * 1.1
+        const grav = H * GRAVITY
         const peak = H * (0.5 + Math.random() * 0.35)
         s.balls.push({
           id: s.id++,
           kana,
           x,
           y: H + r,
-          vx: (W / 2 - x) * (0.25 + Math.random() * 0.4) + (Math.random() - 0.5) * W * 0.15,
+          vx: (W / 2 - x) * (0.15 + Math.random() * 0.25) + (Math.random() - 0.5) * W * 0.1,
           vy: -Math.sqrt(2 * grav * peak),
           r,
           color: pick(COLORS),
@@ -207,7 +213,8 @@ export default function KanaNinja() {
         })
       }
       const elapsed = ROUND_MS - (s.endAt - now)
-      s.nextSpawn = now + Math.max(550, 1200 - elapsed / 90) * (0.8 + Math.random() * 0.4)
+      // Nhịp bắn: 1.8s lúc đầu → nhanh dần tới 1.1s.
+      s.nextSpawn = now + Math.max(1100, 1800 - elapsed / 80) * (0.85 + Math.random() * 0.3)
     }
 
     const burst = (x: number, y: number, color: string, n: number, speed: number) => {
@@ -362,7 +369,7 @@ export default function KanaNinja() {
       const s = g.current
       const dt = Math.min(0.04, (now - last) / 1000)
       last = now
-      const grav = s.H * 1.1
+      const grav = s.H * GRAVITY
 
       if (now >= s.ruleAt) {
         const others = s.rules.filter((r) => r !== s.rule)
