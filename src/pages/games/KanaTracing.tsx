@@ -3,97 +3,37 @@ import { ArrowRight, Eye, EyeOff, Info, RotateCcw, SkipForward, Volume2 } from '
 import { GameShell, StartScreen } from '../../components/GameShell'
 import { GameResult } from '../../components/GameResult'
 import { KANA_BY_CHAR } from '../../data/kana'
-import { STROKES, type Stroke } from '../../data/strokes'
+import { STROKES, STROKES_CREDIT, type Stroke } from '../../data/strokes'
 import { useActivePool } from '../../hooks/useActivePool'
 import { useGameSession } from '../../hooks/useGameSession'
 import { useProgressStore } from '../../store/useProgressStore'
 import { playSfx, speak } from '../../lib/audio'
 import { cn, shuffle } from '../../lib/utils'
+import { dist, spline, validateStroke, type P } from '../../lib/strokeCheck'
 
-type P = { x: number; y: number }
 type InkPt = P & { w: number }
 
 const SESSION = 8
 
-/* ---------------- Hình học ---------------- */
-
-const dist = (a: P, b: P) => Math.hypot(a.x - b.x, a.y - b.y)
-const pathLen = (ps: P[]) => ps.reduce((s, p, i) => (i ? s + dist(ps[i - 1], p) : 0), 0)
-
-function distToPolyline(p: P, line: P[]) {
-  let best = Infinity
-  for (let i = 1; i < line.length; i++) {
-    const a = line[i - 1]
-    const b = line[i]
-    const dx = b.x - a.x
-    const dy = b.y - a.y
-    const len = dx * dx + dy * dy
-    const t = len ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len)) : 0
-    best = Math.min(best, Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy)))
-  }
-  return best
-}
-
-/** Nội suy Catmull-Rom qua các điểm mốc → đường cong mượt. */
-function spline(pts: P[]): P[] {
-  if (pts.length === 2) return Array.from({ length: 21 }, (_, i) => ({ x: pts[0].x + ((pts[1].x - pts[0].x) * i) / 20, y: pts[0].y + ((pts[1].y - pts[0].y) * i) / 20 }))
-  const out: P[] = []
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] ?? pts[i]
-    const p1 = pts[i]
-    const p2 = pts[i + 1]
-    const p3 = pts[i + 2] ?? p2
-    for (let s = 0; s < 12; s++) {
-      const t = s / 12
-      const t2 = t * t
-      const t3 = t2 * t
-      const f = (a: number, b: number, c: number, d: number) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3)
-      out.push({ x: f(p0.x, p1.x, p2.x, p3.x), y: f(p0.y, p1.y, p2.y, p3.y) })
-    }
-  }
-  out.push(pts[pts.length - 1])
-  return out
-}
-
-/** Lấy mẫu lại nét người dùng mỗi ~3px để kiểm tra không bị "nhảy cóc" khi vẽ nhanh. */
-function resample(ps: P[], step = 3): P[] {
-  if (ps.length < 2) return ps
-  const out = [ps[0]]
-  for (let i = 1; i < ps.length; i++) {
-    const a = ps[i - 1]
-    const b = ps[i]
-    const n = Math.max(1, Math.floor(dist(a, b) / step))
-    for (let k = 1; k <= n; k++) out.push({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n })
-  }
-  return out
-}
-
-interface Check {
-  ok: boolean
-  reason?: string
-  avg?: number
-}
-
-/** Thuật toán chấm một nét: điểm đặt bút, chiều, độ lệch (tolerance) và thứ tự đi qua các điểm mốc. */
-function validateStroke(userRaw: P[], model: P[], checkpoints: P[], tol: number): Check {
-  const user = resample(userRaw)
-  if (user.length < 3 || pathLen(user) < pathLen(model) * 0.45) return { ok: false, reason: 'Nét quá ngắn – hãy vẽ hết nét.' }
-  const first = user[0]
-  const last = user[user.length - 1]
-  if (dist(first, model[model.length - 1]) < tol * 1.6 && dist(last, model[0]) < tol * 1.6)
-    return { ok: false, reason: 'Ngược chiều nét! Hãy đi theo mũi tên.' }
-  if (dist(first, model[0]) > tol * 1.8) return { ok: false, reason: 'Đặt bút sai chỗ – bắt đầu từ chấm có số.' }
-  const ds = user.map((p) => distToPolyline(p, model))
-  if (ds.filter((d) => d > tol).length / ds.length > 0.15) return { ok: false, reason: 'Nét bị lệch khỏi đường mẫu.' }
-  let next = 0
-  for (const p of user) if (next < checkpoints.length && dist(p, checkpoints[next]) <= tol * 1.4) next++
-  if (next < checkpoints.length) return { ok: false, reason: 'Chưa đi qua đủ các điểm của nét.' }
-  return { ok: true, avg: ds.reduce((a, b) => a + b, 0) / ds.length }
-}
-
 const grade = (score: number) => (score >= 95 ? 'Hoàn hảo' : score >= 85 ? 'Rất tốt' : score >= 70 ? 'Tốt' : 'Cần luyện thêm')
 
 /* ---------------- Component ---------------- */
+
+/** Ghi nguồn dữ liệu nét theo yêu cầu giấy phép CC BY-SA 3.0. */
+function Credit() {
+  return (
+    <p className="mt-4 text-center text-[11px] text-sumi-400">
+      Dữ liệu thứ tự nét:{' '}
+      <a href={STROKES_CREDIT.url} target="_blank" rel="noreferrer" className="underline hover:text-sakura-500">
+        {STROKES_CREDIT.name}
+      </a>{' '}
+      © {STROKES_CREDIT.author} ·{' '}
+      <a href={STROKES_CREDIT.licenseUrl} target="_blank" rel="noreferrer" className="underline hover:text-sakura-500">
+        {STROKES_CREDIT.license}
+      </a>
+    </p>
+  )
+}
 
 export default function KanaTracing() {
   const { pool } = useActivePool()
@@ -353,7 +293,7 @@ export default function KanaTracing() {
     const s = st.current
     if (!s.drawing) return
     s.drawing = false
-    const res = validateStroke(s.current, models[strokeIdx], checkpoints[strokeIdx], tol)
+    const res = validateStroke(s.current, models[strokeIdx], checkpoints[strokeIdx], tol, models.slice(strokeIdx + 1))
     if (!res.ok) {
       s.fails++
       s.current = []
@@ -398,6 +338,7 @@ export default function KanaTracing() {
               <div className="mt-1 font-jp text-base tracking-wider">{(usingSample ? Object.keys(STROKES) : inScope).join(' ')}</div>
             </div>
           </div>
+          <Credit />
         </StartScreen>
       ) : (
         char && (
@@ -411,7 +352,7 @@ export default function KanaTracing() {
             </div>
 
             <div className="card mb-3 flex items-center gap-4 p-3">
-              <div className="grid size-14 place-items-center rounded-2xl bg-sumi-100 font-jp text-4xl font-bold dark:bg-sumi-800">{char}</div>
+              <div className={cn('grid h-14 min-w-14 place-items-center rounded-2xl bg-sumi-100 px-1 font-jp font-bold dark:bg-sumi-800', char.length > 1 ? 'text-2xl' : 'text-4xl')}>{char}</div>
               <div className="flex-1">
                 <div className="text-2xl font-extrabold text-sakura-500">{kana?.romaji}</div>
                 <div className="text-xs text-sumi-400">{strokes.length} nét · {kana?.type === 'katakana' ? 'Katakana' : 'Hiragana'}</div>
@@ -465,6 +406,7 @@ export default function KanaTracing() {
                 </button>
               )}
             </div>
+            <Credit />
           </div>
         )
       )}

@@ -42,3 +42,6 @@ src/
 4. Authentication → URL Configuration: đặt **Site URL** = địa chỉ web (vd https://kana-quest.vercel.app).
 
 Không có 2 biến môi trường thì app vẫn chạy offline, nút tài khoản tự ẩn.
+
+## Nguồn dữ liệu
+- **Thứ tự nét (game Tập viết):** [KanjiVG](https://kanjivg.tagaini.net) © Ulrich Apel, giấy phép [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/). File `src/data/strokes.ts` là bản chuyển đổi tự sinh bằng `npm run gen:strokes` và được phân phối theo cùng giấy phép CC BY-SA 3.0.
