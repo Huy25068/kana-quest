@@ -59,6 +59,8 @@ export interface Check {
   ok: boolean
   reason?: string
   avg?: number
+  /** Độ lệch trung bình so với sai số cho phép (0 = trùng khít) – dùng để chấm điểm. */
+  ratio?: number
 }
 
 /** Thuật toán chấm một nét: điểm đặt bút, chiều, độ lệch (tolerance) và thứ tự đi qua các điểm mốc. */
@@ -75,13 +77,39 @@ function signedArea(ps: P[]) {
 
 const meanDist = (ps: P[], line: P[]) => ps.reduce((s, p) => s + distToPolyline(p, line), 0) / ps.length
 
+const centroid = (ps: P[]) => ({ x: ps.reduce((a, p) => a + p.x, 0) / ps.length, y: ps.reduce((a, p) => a + p.y, 0) / ps.length })
+
 /**
- * @param later các nét PHÍA SAU nét hiện tại – dùng để phát hiện viết sai thứ tự
- *              (vd hai gạch của dấu ゛ nằm sát nhau).
+ * Dời + co giãn nét người dùng cho khớp tâm và độ dài với nét mẫu
+ * → chỉ còn so HÌNH DÁNG và CHIỀU, không phụ thuộc viết ở đâu / to hay nhỏ.
  */
-export function validateStroke(userRaw: P[], model: P[], checkpoints: P[], tol: number, later: P[][] = []): Check {
-  const user = resample(userRaw)
-  if (user.length < 3 || pathLen(user) < pathLen(model) * 0.45) return { ok: false, reason: 'Nét quá ngắn – hãy vẽ hết nét.' }
+/** Độ tỏa quanh tâm (căn bậc hai trung bình bình phương khoảng cách) – ít bị ảnh hưởng bởi rung tay hơn độ dài nét. */
+const spread = (ps: P[], c: P) => Math.sqrt(ps.reduce((a, p) => a + (p.x - c.x) ** 2 + (p.y - c.y) ** 2, 0) / ps.length)
+
+export function normalizeTo(user: P[], model: P[]): P[] {
+  const cu = centroid(user)
+  const cm = centroid(model)
+  const k = spread(resample(model), cm) / Math.max(1, spread(user, cu))
+  return user.map((p) => ({ x: cm.x + (p.x - cu.x) * k, y: cm.y + (p.y - cu.y) * k }))
+}
+
+export interface ValidateOptions {
+  /** Các nét PHÍA SAU nét hiện tại – để phát hiện viết sai thứ tự. */
+  later?: P[][]
+  /** Không bắt đúng vị trí/kích thước (chế độ Ẩn mẫu): chỉ chấm hình dáng, chiều, thứ tự. */
+  freePosition?: boolean
+}
+
+export function validateStroke(userRaw: P[], model: P[], checkpoints: P[], tol: number, opts: ValidateOptions = {}): Check {
+  const { later = [], freePosition = false } = opts
+  const raw = resample(userRaw)
+  if (raw.length < 3) return { ok: false, reason: 'Nét quá ngắn – hãy vẽ hết nét.' }
+  if (freePosition ? pathLen(raw) < tol * 0.35 : pathLen(raw) < pathLen(model) * 0.45)
+    return { ok: false, reason: 'Nét quá ngắn – hãy vẽ hết nét.' }
+  const user = freePosition ? normalizeTo(raw, model) : raw
+  // Sai số theo kích thước nét khi không bắt đúng vị trí: nét nhỏ (vd dấu ゛) → sai số nhỏ tương ứng,
+  // tránh việc vẽ hình bất kỳ rồi co lại vẫn lọt qua.
+  const t = freePosition ? Math.min(tol, Math.max(tol * 0.3, spread(resample(model), centroid(model)) * 0.45)) : tol
   const first = user[0]
   const last = user[user.length - 1]
   // Ngược chiều: đặt bút gần điểm CUỐI hơn điểm đầu và nhấc bút gần điểm ĐẦU hơn điểm cuối.
@@ -97,15 +125,22 @@ export function validateStroke(userRaw: P[], model: P[], checkpoints: P[], tol: 
     const got = signedArea(user)
     if (Math.abs(want) > len * 0.5 && Math.sign(want) !== Math.sign(got))
       return { ok: false, reason: 'Ngược chiều vòng! Hãy đi theo mũi tên.' }
+  } else if (freePosition) {
+    // Hướng tổng thể (đặt bút → nhấc bút) phải gần với mẫu.
+    const a = Math.atan2(end.y - start.y, end.x - start.x)
+    const b = Math.atan2(last.y - first.y, last.x - first.x)
+    const diff = Math.abs(((b - a + Math.PI * 3) % (Math.PI * 2)) - Math.PI)
+    if (diff > Math.PI / 4) return { ok: false, reason: 'Sai hướng nét.' }
   }
   // Sai thứ tự: nét vừa vẽ khớp với một nét phía sau rõ hơn nét hiện tại.
   const here = meanDist(user, model)
-  if (later.some((m) => meanDist(user, m) < here * 0.6)) return { ok: false, reason: 'Sai thứ tự nét – hãy viết nét có chấm số trước.' }
-  if (dist(first, model[0]) > tol * 1.8) return { ok: false, reason: 'Đặt bút sai chỗ – bắt đầu từ chấm có số.' }
+  if (later.some((m) => meanDist(freePosition ? normalizeTo(raw, m) : raw, m) < here * 0.6)) return { ok: false, reason: 'Sai thứ tự nét – hãy viết nét có chấm số trước.' }
+  if (dist(first, model[0]) > t * 1.8) return { ok: false, reason: 'Đặt bút sai chỗ – bắt đầu từ chấm có số.' }
   const ds = user.map((p) => distToPolyline(p, model))
-  if (ds.filter((d) => d > tol).length / ds.length > 0.15) return { ok: false, reason: 'Nét bị lệch khỏi đường mẫu.' }
+  if (ds.filter((d) => d > t).length / ds.length > 0.15) return { ok: false, reason: 'Nét bị lệch khỏi đường mẫu.' }
   let next = 0
-  for (const p of user) if (next < checkpoints.length && dist(p, checkpoints[next]) <= tol * 1.4) next++
+  for (const p of user) if (next < checkpoints.length && dist(p, checkpoints[next]) <= t * 1.4) next++
   if (next < checkpoints.length) return { ok: false, reason: 'Chưa đi qua đủ các điểm của nét.' }
-  return { ok: true, avg: ds.reduce((a, b) => a + b, 0) / ds.length }
+  const avg = ds.reduce((a, b) => a + b, 0) / ds.length
+  return { ok: true, avg, ratio: avg / t }
 }

@@ -294,7 +294,11 @@ export default function KanaTracing() {
     const s = st.current
     if (!s.drawing) return
     s.drawing = false
-    const res = validateStroke(s.current, models[strokeIdx], checkpoints[strokeIdx], tol, models.slice(strokeIdx + 1))
+    const res = validateStroke(s.current, models[strokeIdx], checkpoints[strokeIdx], tol, {
+      later: models.slice(strokeIdx + 1),
+      // Ẩn mẫu: viết ở đâu, to nhỏ thế nào cũng được – chỉ chấm hình dáng, chiều và thứ tự nét.
+      freePosition: !showGhost,
+    })
     if (!res.ok) {
       s.fails++
       s.current = []
@@ -306,7 +310,7 @@ export default function KanaTracing() {
     }
     s.ink.push(s.current)
     s.current = []
-    s.strokeScores.push(100 - Math.min(40, (res.avg! / tol) * 35))
+    s.strokeScores.push(100 - Math.min(40, res.ratio! * 35))
     playSfx('ting')
     if (strokeIdx + 1 >= strokes.length) completeChar()
     else {
@@ -327,7 +331,7 @@ export default function KanaTracing() {
           desc={
             <>
               Tô theo <b>đúng thứ tự</b> và <b>đúng chiều</b> từng nét bút (Kakijun). Bắt đầu từ chấm đỏ có số, đi theo mũi
-              tên xanh. Nét lệch hoặc ngược chiều sẽ bị xóa để viết lại. Viết xong có thể <b>viết lại</b> bao nhiêu lần tùy thích để luyện, rồi bấm <b>Chữ tiếp</b>.
+              tên xanh. Nét lệch hoặc ngược chiều sẽ bị xóa để viết lại. Viết xong có thể <b>viết lại</b> bao nhiêu lần tùy thích để luyện, rồi bấm <b>Chữ tiếp</b>. Bấm <b>Ẩn mẫu</b> để tự viết theo trí nhớ – khi đó viết ở đâu, to hay nhỏ đều được, chỉ cần đúng hình dáng, chiều và thứ tự nét.
             </>
           }
         >
