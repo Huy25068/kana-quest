@@ -48,8 +48,11 @@ export default function KanaTracing() {
   const [idx, setIdx] = useState(0)
   const [strokeIdx, setStrokeIdx] = useState(0)
   const [message, setMessage] = useState<{ text: string; bad: boolean } | null>(null)
-  const [charResult, setCharResult] = useState<{ score: number } | null>(null)
-  const [results, setResults] = useState<number[]>([])
+  const [charResult, setCharResult] = useState<{ score: number; first: boolean } | null>(null)
+  // Điểm cao nhất của từng chữ trong phiên (theo vị trí trong hàng đợi) và số lần viết.
+  const [best, setBest] = useState<Record<number, number>>({})
+  const [attempts, setAttempts] = useState<Record<number, number>>({})
+  const results = Object.values(best)
   const [showGhost, setShowGhost] = useState(true)
   const [size, setSize] = useState(340)
 
@@ -66,8 +69,6 @@ export default function KanaTracing() {
   })
 
   const char = queue?.[idx]
-  const autoNext = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  useEffect(() => () => clearTimeout(autoNext.current), [])
   const strokes: Stroke[] = char ? STROKES[char] : []
 
   /* ---------- Toạ độ ---------- */
@@ -213,22 +214,21 @@ export default function KanaTracing() {
     const list = shuffle(usingSample ? Object.keys(STROKES) : inScope).slice(0, SESSION)
     setQueue(list)
     setIdx(0)
-    setResults([])
+    setBest({})
+    setAttempts({})
     resetChar()
   }
 
   const exit = () => {
-    clearTimeout(autoNext.current)
     reset()
     setQueue(null)
   }
 
-  const nextChar = (scores = results) => {
-    clearTimeout(autoNext.current)
+  const nextChar = () => {
     if (!queue) return
     if (idx + 1 >= queue.length) {
-      const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0
-      finish(scores.reduce((a, b) => a + b, 0), avg >= 70, 0)
+      const avgScore = results.length ? Math.round(results.reduce((a, b) => a + b, 0) / results.length) : 0
+      finish(results.reduce((a, b) => a + b, 0), avgScore >= 70, 0)
       return
     }
     setIdx(idx + 1)
@@ -240,8 +240,9 @@ export default function KanaTracing() {
     const base = s.strokeScores.reduce((a, b) => a + b, 0) / s.strokeScores.length
     const score = Math.max(40, Math.min(100, Math.round(base - s.fails * 8)))
     const kana = KANA_BY_CHAR.get(char!)
-    // Hoàn thành chữ: +10 EXP; ghi đúng/sai theo độ chuẩn xác.
-    if (kana) {
+    const first = !attempts[idx]
+    // Lần viết xong ĐẦU TIÊN của chữ: +10 EXP và ghi đúng/sai. Viết lại để luyện thì chỉ cập nhật điểm cao nhất.
+    if (kana && first) {
       if (score >= 70) answer(kana.id, true, { silent: true })
       else {
         answer(kana.id, false, { silent: true })
@@ -250,10 +251,9 @@ export default function KanaTracing() {
     }
     playSfx('win')
     speak(char!, { audioUrl: kana?.audioUrl })
-    const nextResults = [...results, score]
-    setResults(nextResults)
-    setCharResult({ score })
-    autoNext.current = setTimeout(() => nextChar(nextResults), 1800)
+    setAttempts((a) => ({ ...a, [idx]: (a[idx] ?? 0) + 1 }))
+    setBest((b) => ({ ...b, [idx]: Math.max(b[idx] ?? 0, score) }))
+    setCharResult({ score, first })
   }
 
   /* ---------- Nhập nét ---------- */
@@ -325,7 +325,7 @@ export default function KanaTracing() {
           desc={
             <>
               Tô theo <b>đúng thứ tự</b> và <b>đúng chiều</b> từng nét bút (Kakijun). Bắt đầu từ chấm đỏ có số, đi theo mũi
-              tên xanh. Nét lệch hoặc ngược chiều sẽ bị xóa để viết lại. Mỗi chữ hoàn thành +10 EXP.
+              tên xanh. Nét lệch hoặc ngược chiều sẽ bị xóa để viết lại. Viết xong có thể <b>viết lại</b> bao nhiêu lần tùy thích để luyện, rồi bấm <b>Chữ tiếp</b>.
             </>
           }
         >
@@ -377,31 +377,34 @@ export default function KanaTracing() {
                   {message.text}
                 </div>
               )}
-              {charResult && (
-                <div className="absolute inset-0 grid place-items-center rounded-3xl bg-white/70 backdrop-blur-sm dark:bg-sumi-950/60">
-                  <div className="animate-pop text-center">
-                    <div className="font-jp text-7xl font-bold">{char}</div>
-                    <div className="mt-2 text-3xl font-extrabold text-matcha-500">{charResult.score}%</div>
-                    <div className="text-lg font-bold">{grade(charResult.score)}</div>
-                    <div className="mt-1 text-sm font-semibold text-fuji-500">+10 EXP</div>
-                  </div>
-                </div>
-              )}
             </div>
 
+            {charResult && (
+              <div className="mt-4 flex animate-pop items-center gap-4 rounded-2xl border-2 border-matcha-300 bg-matcha-50 p-4 dark:border-matcha-500/40 dark:bg-matcha-500/10">
+                <div className="text-center">
+                  <div className="text-3xl font-extrabold text-matcha-500">{charResult.score}%</div>
+                  <div className="text-sm font-bold">{grade(charResult.score)}</div>
+                </div>
+                <div className="flex-1 text-sm text-sumi-500 dark:text-sumi-400">
+                  <div>Lần viết thứ <b>{attempts[idx]}</b> · Cao nhất: <b className="text-matcha-600 dark:text-matcha-300">{best[idx]}%</b></div>
+                  <div>{charResult.first ? <span className="font-semibold text-fuji-500">+10 EXP</span> : 'Viết lại để luyện – không cộng thêm EXP'}</div>
+                </div>
+              </div>
+            )}
+
             <div className="mt-6 grid grid-cols-3 gap-2">
-              <button className="btn-secondary px-2 text-sm" onClick={resetChar} disabled={!!charResult}>
+              <button className={cn('px-2 text-sm', charResult ? 'btn-success' : 'btn-secondary')} onClick={resetChar}>
                 <RotateCcw className="size-4" /> Viết lại
               </button>
               <button className="btn-secondary px-2 text-sm" onClick={() => setShowGhost((v) => !v)}>
                 {showGhost ? <EyeOff className="size-4" /> : <Eye className="size-4" />} {showGhost ? 'Ẩn mẫu' : 'Hiện mẫu'}
               </button>
               {charResult ? (
-                <button className="btn-primary px-2 text-sm" onClick={() => nextChar(results)}>
-                  Tiếp <ArrowRight className="size-4" />
+                <button className="btn-primary px-2 text-sm" onClick={nextChar}>
+                  {idx + 1 >= queue.length ? 'Kết thúc' : 'Chữ tiếp'} <ArrowRight className="size-4" />
                 </button>
               ) : (
-                <button className="btn-secondary px-2 text-sm" onClick={() => nextChar()}>
+                <button className="btn-secondary px-2 text-sm" onClick={nextChar}>
                   <SkipForward className="size-4" /> Bỏ qua
                 </button>
               )}

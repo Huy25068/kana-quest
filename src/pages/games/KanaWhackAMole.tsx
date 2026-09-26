@@ -11,6 +11,9 @@ import type { KanaItem } from '../../types/kana'
 
 const ROUND_MS = 60_000
 const PENALTY_MS = 3_000 // đập nhầm → trừ 3 giây (thay cho mất tim)
+// Thời gian chuột nhô lên: 1.8s lúc đầu, nhanh dần nhưng không dưới 1.25s.
+const UP_MS_START = 1800
+const UP_MS_MIN = 1250
 
 interface Mole {
   uid: number
@@ -97,7 +100,7 @@ export default function KanaWhackAMole() {
     const count = Math.random() < 0.5 ? 2 : 3
     const kanas = shuffle([t, ...distractors(t, s.pool, count - 1)])
     const slots = sample([0, 1, 2, 3, 4, 5, 6, 7, 8], kanas.length)
-    const upMs = Math.max(1000, 1500 - s.hits * 12)
+    const upMs = Math.max(UP_MS_MIN, UP_MS_START - s.hits * 12)
     const next: (Mole | null)[] = Array(9).fill(null)
     kanas.forEach((k, i) => {
       next[slots[i]] = { uid: s.uid++, kana: k, correct: k.id === t.id, downAt: now + upMs, status: 'up' }
@@ -112,9 +115,9 @@ export default function KanaWhackAMole() {
   const closeRound = (now: number, gap: number) => {
     const s = g.current
     s.roundOpen = false
-    // Chu kỳ 1.2s → 2s, nhanh dần theo số lần đập trúng.
-    const cycle = Math.max(1200, 2000 - s.hits * 30)
-    s.nextRoundAt = now + Math.max(gap, cycle - 1500)
+    // Chu kỳ 2.2s → 1.4s, nhanh dần theo số lần đập trúng.
+    const cycle = Math.max(1400, 2200 - s.hits * 25)
+    s.nextRoundAt = now + Math.max(gap, cycle - UP_MS_START)
   }
 
   /* ---------- Vòng lặp (100ms) ---------- */

@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Scroll, Timer, Zap } from 'lucide-react'
 import { GameShell, StartScreen } from '../../components/GameShell'
 import { GameResult } from '../../components/GameResult'
-import { CATEGORY_LABELS, ROWS } from '../../data/kana'
 import { useActivePool } from '../../hooks/useActivePool'
 import { useGameSession } from '../../hooks/useGameSession'
 import { playSfx } from '../../lib/audio'
-import { cn, pick, shuffle, uniqueByRomaji } from '../../lib/utils'
-import type { KanaCategory, KanaItem } from '../../types/kana'
+import { cn, pick, uniqueByRomaji } from '../../lib/utils'
+import type { KanaItem } from '../../types/kana'
+import { buildRules, nextRule, type Rule, type RuleKind } from '../../lib/ninjaRules'
 
 const ROUND_MS = 60_000
 const RULE_MS = 20_000
@@ -18,45 +18,6 @@ const GRAVITY = 0.5 // × chiều cao khung / giây²
 const MAX_ON_SCREEN = 4
 const BOMB_RATE = 0.07
 const COLORS = ['#ffc2d1', '#c4e0ab', '#b6d6ff', '#ffe588', '#d9cbff', '#ffd6a5']
-
-/* ---------------- Luật chém ---------------- */
-
-interface Rule {
-  label: string
-  test: (k: KanaItem) => boolean
-}
-
-/** Sinh các luật hợp lệ với pool hiện tại (phải có cả chữ đúng lẫn chữ sai). */
-function makeRules(pool: KanaItem[]): Rule[] {
-  const rules: Rule[] = []
-  const types = new Set(pool.map((k) => k.type))
-  if (types.size > 1) {
-    rules.push({ label: 'Chém tất cả chữ HIRAGANA – bỏ qua Katakana!', test: (k) => k.type === 'hiragana' })
-    rules.push({ label: 'Chém tất cả chữ KATAKANA – bỏ qua Hiragana!', test: (k) => k.type === 'katakana' })
-  }
-  const cats = new Set(pool.map((k) => k.category))
-  if (cats.size > 1)
-    for (const c of cats) {
-      const l = CATEGORY_LABELS[c as KanaCategory]
-      rules.push({ label: `Chỉ chém ${l.vi.toLowerCase()} (${l.jp})`, test: (k) => k.category === c })
-    }
-  for (const r of ROWS) {
-    const inRow = pool.filter((k) => k.row === r.id)
-    if (inRow.length >= 2 && inRow.length < pool.length)
-      rules.push({
-        label: `Chỉ chém chữ ${r.label.startsWith('Hàng') ? r.label.replace('Hàng', 'hàng') : 'hàng ' + r.label} (${inRow.slice(0, 5).map((k) => k.char).join(', ')})`,
-        test: (k) => k.row === r.id,
-      })
-  }
-  for (const v of ['a', 'i', 'u', 'e', 'o']) {
-    const n = pool.filter((k) => k.romaji.endsWith(v)).length
-    if (n >= 2 && n < pool.length) rules.push({ label: `Chỉ chém chữ có đuôi âm "-${v}"`, test: (k) => k.romaji.endsWith(v) })
-  }
-  const valid = rules.filter((r) => pool.some(r.test) && pool.some((k) => !r.test(k)))
-  if (valid.length) return valid
-  const one = pick(pool)
-  return [{ label: `Chỉ chém chữ đọc là "${one.romaji}"`, test: (k) => k.romaji === one.romaji }]
-}
 
 /* ---------------- Vật thể ---------------- */
 
@@ -119,7 +80,8 @@ export default function KanaNinja() {
     particles: [] as Particle[],
     trail: [] as { x: number; y: number; t: number }[],
     down: false,
-    rules: [] as Rule[],
+    rules: {} as Record<RuleKind, Rule[]>,
+    usedKinds: [] as RuleKind[],
     rule: null as Rule | null,
     ruleAt: 0,
     endAt: 0,
@@ -193,9 +155,9 @@ export default function KanaNinja() {
       const n = Math.min(Math.random() < 0.25 ? 2 : 1, MAX_ON_SCREEN - onScreen)
       for (let i = 0; i < n; i++) {
         const isBomb = Math.random() < BOMB_RATE
-        const good = s.pool.filter((k) => s.rule!.test(k))
-        const bad = s.pool.filter((k) => !s.rule!.test(k))
-        const kana = isBomb ? null : Math.random() < 0.55 && good.length ? pick(good) : pick(bad.length ? bad : good)
+        // Khoảng một nửa là chữ cần chém, còn lại là chữ gây nhiễu (dễ nhầm) của luật hiện tại.
+        const { good, bad } = s.rule!
+        const kana = isBomb ? null : Math.random() < 0.5 ? pick(good) : pick(bad)
         const r = Math.max(26, Math.min(40, W * 0.06))
         const x = W * (0.15 + Math.random() * 0.7)
         const grav = H * GRAVITY
@@ -372,8 +334,8 @@ export default function KanaNinja() {
       const grav = s.H * GRAVITY
 
       if (now >= s.ruleAt) {
-        const others = s.rules.filter((r) => r !== s.rule)
-        s.rule = pick(others.length ? others : s.rules)
+        s.rule = nextRule(s.rules, s.usedKinds)
+        s.usedKinds.push(s.rule.kind)
         s.ruleAt = now + RULE_MS
         playSfx('ting')
         say('📜 Luật mới!')
@@ -476,9 +438,9 @@ export default function KanaNinja() {
     reset()
     const now = performance.now()
     const p = uniqueByRomaji(pool)
-    const rules = shuffle(makeRules(p))
+    const rules = buildRules(p)
     Object.assign(g.current, {
-      balls: [], pieces: [], particles: [], trail: [], pool: p, rules, rule: null, ruleAt: now,
+      balls: [], pieces: [], particles: [], trail: [], pool: p, rules, usedKinds: [], rule: null, ruleAt: now,
       endAt: now + ROUND_MS, nextSpawn: now + 800, score: 0, combo: 0, maxCombo: 0, missStreak: 0,
       sliced: 0, wrong: 0, bombs: 0, misses: 0,
     })
