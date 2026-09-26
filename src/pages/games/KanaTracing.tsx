@@ -146,8 +146,9 @@ export default function KanaTracing() {
       const inkColor = dark ? '#f7f6f4' : '#1a1816'
       s.ink.forEach((pts) => drawInk(pts, inkColor))
 
+      // Ẩn mẫu = tự viết theo trí nhớ: tắt luôn nét nhấp nháy, mũi tên, chấm số và số thứ tự.
       const cur = models[strokeIdx]
-      if (cur && !charResult) {
+      if (showGhost && cur && !charResult) {
         // Nét cần viết – nhấp nháy
         const a = 0.35 + 0.3 * Math.sin(now / 220)
         drawPath(cur, size * 0.05, now < s.failFlashUntil ? `rgba(232,72,114,0.8)` : `rgba(247,103,140,${a})`)
@@ -185,7 +186,7 @@ export default function KanaTracing() {
 
       // Số thứ tự các nét sau (mờ)
       models.forEach((m, i) => {
-        if (i <= strokeIdx) return
+        if (!showGhost || i <= strokeIdx) return
         ctx.fillStyle = dark ? 'rgba(255,255,255,0.3)' : 'rgba(52,48,44,0.3)'
         ctx.font = `bold ${size * 0.035}px "Be Vietnam Pro", sans-serif`
         ctx.textAlign = 'center'
@@ -299,7 +300,8 @@ export default function KanaTracing() {
       s.current = []
       s.failFlashUntil = performance.now() + 500
       playSfx('wrong')
-      setMessage({ text: res.reason!, bad: true })
+      // Khi ẩn mẫu thì không nhắc tới chấm số / mũi tên (vì không còn hiển thị).
+      setMessage({ text: showGhost ? res.reason! : res.reason!.replace(/ – .*$| Hãy đi theo mũi tên.$/, ''), bad: true })
       return
     }
     s.ink.push(s.current)
@@ -345,7 +347,10 @@ export default function KanaTracing() {
           <div className="mx-auto max-w-md">
             <div className="mb-2 flex justify-between text-sm font-semibold text-sumi-500">
               <span>Chữ {idx + 1}/{queue.length}</span>
-              <span>Nét {Math.min(strokeIdx + 1, strokes.length)}/{strokes.length}</span>
+              <span>
+                {!showGhost && <span className="mr-2 rounded-full bg-fuji-100 px-2 py-0.5 text-xs text-fuji-500 dark:bg-fuji-500/15">Không gợi ý</span>}
+                Nét {Math.min(strokeIdx + 1, strokes.length)}/{strokes.length}
+              </span>
             </div>
             <div className="mb-4 h-2 overflow-hidden rounded-full bg-sumi-100 dark:bg-sumi-800">
               <div className="h-full rounded-full bg-sumi-500 transition-all" style={{ width: `${(idx / queue.length) * 100}%` }} />
